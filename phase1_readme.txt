@@ -1,6 +1,6 @@
 Phase 1:
 
-TO DO:
+THING YOU TOLD TO DO:
 
 1)You told some corrections in the dataset(like ground truth,frames(no of frames eyes closed))
 
