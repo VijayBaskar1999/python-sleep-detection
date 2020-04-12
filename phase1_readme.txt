@@ -1,6 +1,6 @@
 Phase 1:
 
-THING YOU TOLD TO DO:
+TO DO:
 
 1)You told some corrections in the dataset(like ground truth,frames(no of frames eyes closed))
 
@@ -37,20 +37,20 @@ MODULES NEEDED:
 
 HOW TO RUN:
 
-1)train.py
+1)train_phase1.py
 
-	The train.py will analyse the video samples and create a dataset(ie.dataset.csv)
+	The train_phase1.py will analyse the video samples and create a dataset(ie.dataset_phase1.csv)
 
 OUTPUT:
 	Dataset Created Successfully!!!
 
-	dataset.csv
+	dataset_phase1.csv
 
 	I have included the dataset.csv file also in the github link.
 
 ```````````````````````````````````````````````````````````````````````````````````
 
-2)SVM_accuracy.py
+2)SVM_accuracy_phase1.py
 
 	It will give the 10-fold result of accuracy.
 	Each fold accuracy are seperately displayed and finally the average accuracy is also calculated.

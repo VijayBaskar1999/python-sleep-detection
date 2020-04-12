@@ -5,7 +5,7 @@ df = pd.read_csv("dataset_phase2.csv")
 ds=df.sample(frac=1)
 ds.to_csv('data2.csv',index=False)
 print ("Total number of rows in the dataset : ",ds.shape[0])
-X=ds[['minimum_thresh','frames(no of frames eye closed)','headframe(no of frames head down)']]
+X=ds[['minimum_thresh','frames(no of frames eye closed)','yawn count','headframe(no of frames head down)']]
 Y = ds['Ground Truth']
 
 from sklearn.model_selection import train_test_split
