@@ -1,12 +1,11 @@
-#UNDER DEVELOPMENT FOR TRAkING MOUTH JAW AND EYE REDNESS
-
-
 from scipy.spatial import distance
 from imutils import face_utils
 import imutils
 import dlib
 import cv2
 from playsound import playsound
+import winsound
+
 
 
 
@@ -24,18 +23,19 @@ def mouth_aspect_ratio(mouth):
     C = distance.euclidean(mouth[0], mouth[6])
     mou = (A + B) / (2.0 * C)
     return mou
-def jaw_left_distance(jaw):
-    A = distance.euclidean(jaw[0], jaw[8])
-    return A
-def jaw_right_distance(jaw):
-    A = distance.euclidean(jaw[8], jaw[16])
-    return A
-def difference_in_jaw(a,b):
-    c = abs(a-b)
-    return c
 
+def calc_head_slope(jaw):
+    midpoint = [(jaw[0][0] + jaw[16][0]) / 2, (jaw[0][1] + jaw[16][1]) / 2]
+    slope = (jaw[8][1]-midpoint[1])/(jaw[8][0]-midpoint[0])
+    return abs(slope)
+def calc_jaw_h_ratio(jaw):
+    midpoint = [(jaw[0][0] + jaw[16][0]) / 2, (jaw[0][1] + jaw[16][1]) / 2]
+    h = distance.euclidean(midpoint, jaw[8])
+    b = distance.euclidean(jaw[0],jaw[16])
+    return h/b
 thresh = 0.25
-frame_check = 20
+frame_check = 40
+total_yawn_count = 0
 detect = dlib.get_frontal_face_detector()
 predict = dlib.shape_predictor("model/shape_predictor_68_face_landmarks.dat")  # Dat file is the crux of the code
 
@@ -45,6 +45,10 @@ predict = dlib.shape_predictor("model/shape_predictor_68_face_landmarks.dat")  #
 (jStart, jEnd) = face_utils.FACIAL_LANDMARKS_68_IDXS["jaw"]
 cap = cv2.VideoCapture(0)
 flag = 0
+mflag=0
+jflag=0
+temp_yawn_count=0
+yawned = False
 while True:
     ret, frame = cap.read()
     frame = cv2.flip(frame, 1)
@@ -61,10 +65,10 @@ while True:
         leftEAR = eye_aspect_ratio(leftEye)
         rightEAR = eye_aspect_ratio(rightEye)
         mouthEAR = mouth_aspect_ratio(mouth)
-        jaw_L_Result = jaw_left_distance(jaw)
-        jaw_R_Result = jaw_right_distance(jaw)
-        jaw_diff = difference_in_jaw(jaw_L_Result, jaw_R_Result)
+
         ear = (leftEAR + rightEAR) / 2.0
+        head_slope = calc_head_slope(jaw)
+        jaw_h_ratio = calc_jaw_h_ratio(jaw)
         leftEyeHull = cv2.convexHull(leftEye)
         rightEyeHull = cv2.convexHull(rightEye)
         mouthHull = cv2.convexHull(mouth)
@@ -73,28 +77,69 @@ while True:
         cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
         cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
         cv2.drawContours(frame, [jawHull], -1, (0, 255, 0), 1)
-        cv2.putText(frame, "ear:{:.2f}".format(ear), (10, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(frame, "ear:{:.2f}".format(mouthEAR), (10, 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(frame, "L_dis:{:.2f}".format(jaw_L_Result), (10, 110),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(frame, "R_dis:{:.2f}".format(jaw_R_Result), (200, 110),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(frame, "J_Dif:{:.2f}".format(jaw_diff), (10, 140),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, "Eye_aspect_ratio:{:.2f}".format(ear), (10, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.putText(frame, "Mouth_aspect_ratio:{:.2f}".format(mouthEAR), (10, 80),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+        cv2.putText(frame, "Head Slope:{:.2f}".format(head_slope), (10, 110),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+        cv2.putText(frame, "height_ratio:{:.2f}".format(jaw_h_ratio), (10, 140),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.putText(frame, "frame_rate:{:.2f}".format(frame_check), (10, 170),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.putText(frame, "Total_yawn:{:.2f}".format(total_yawn_count), (10, 200),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
         if ear < thresh:
             flag += 1
             print(flag)
             if flag >= frame_check:
                # playsound('alert.mp3')
+                winsound.Beep(2500, 1000)
                 cv2.putText(frame, "****************ALERT!****************", (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
                 cv2.putText(frame, "****************ALERT!****************", (10, 325),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            # print ("Drowsy")
+
         else:
             flag = 0
+        if mouthEAR > 0.50:
+            mflag +=1
+            #print(flag)
+            if mflag >= 17:
+                yawned  =True
+
+        else:
+            if yawned:
+                total_yawn_count += 1
+                temp_yawn_count += 1
+                if (temp_yawn_count == 2):
+                    frame_check -= 2
+                    temp_yawn_count -= 1
+                yawned = False
+            mflag = 0
+
+        if head_slope < 3 or jaw_h_ratio < 0.55 or jaw_h_ratio > 0.84:
+            jflag += 1
+            #print(jflag)
+            if jflag >= frame_check:
+                # playsound('alert.mp3')
+                winsound.Beep(2500, 1000)
+                cv2.putText(frame, "****************ALERT!****************", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                cv2.putText(frame, "****************ALERT!****************", (10, 325),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
+        else:
+            jflag = 0
+        if total_yawn_count>=5:
+            cv2.putText(frame, "************YOU SEEMS SLEEPY**********", (10, 300),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
+
+
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
